@@ -2,8 +2,8 @@
  * Collapsible Options Sections
  * Makes the "General" and "Settings" sections in Cookie Clicker's Options menu collapsible.
  *
- * Load after publishing to GitHub Pages:
- * Game.LoadMod('https://YOUR_USERNAME.github.io/YOUR_REPO/collapsible-options.js');
+ * Load from Tampermonkey with:
+ * Game.LoadMod('https://justinisadog.github.io/Cookie-Clicker-Mods/collapsible-options.js');
  */
 
 (function () {
@@ -14,7 +14,7 @@
   const STORAGE_KEY = 'CC_COLLAPSIBLE_OPTIONS_STATE';
 
   const CollapsibleOptions = {
-    version: '0.1.0',
+    version: '0.2.0',
 
     state: {
       General: false,
@@ -74,37 +74,33 @@
     },
 
     injectCss() {
-  if (document.getElementById('collapsible-options-css')) return;
+      if (document.getElementById('collapsible-options-css')) return;
 
-  const css = document.createElement('style');
-  css.id = 'collapsible-options-css';
+      const css = document.createElement('style');
+      css.id = 'collapsible-options-css';
 
-  css.textContent = `
-    .cc-collapsible-header {
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-    }
+      css.textContent = `
+        .cc-collapsible-header {
+          cursor: pointer;
+          user-select: none;
+        }
 
-    .cc-collapsible-header:hover {
-      filter: brightness(1.15);
-    }
+        .cc-collapsible-header:hover {
+          filter: brightness(1.15);
+        }
 
-    .cc-collapsible-toggle {
-      float: right;
-      font-size: 12px;
-      opacity: 0.9;
-      margin-left: 8px;
-      font-weight: bold;
-    }
+        .cc-collapsible-toggle {
+          margin-left: 4px;
+          font-weight: bold;
+        }
 
-    .cc-collapsible-hidden {
-      display: none !important;
-    }
-  `;
+        .cc-collapsible-hidden {
+          display: none !important;
+        }
+      `;
 
-  document.head.appendChild(css);
-},
+      document.head.appendChild(css);
+    },
 
     hookOptionsMenu() {
       if (
@@ -121,8 +117,8 @@
       Game.UpdateMenu = function () {
         const result = originalUpdateMenu.apply(this, arguments);
 
-        // Cookie Clicker rebuilds the menu HTML often.
-        // Apply after each rebuild.
+        // Cookie Clicker rebuilds the Options menu often.
+        // Re-apply the collapsible behavior after each rebuild.
         setTimeout(() => self.applyWhenReady(), 0);
 
         return result;
@@ -145,6 +141,7 @@
 
     findTargetHeaders(menu) {
       const targets = {};
+
       const possibleHeaders = Array.from(
         menu.querySelectorAll('.title, h2, h3, .section')
       );
@@ -161,52 +158,64 @@
     },
 
     cleanText(text) {
-  return String(text || '')
-    .replace(/\[\+\]|\[-\]/g, '')
-    .replace(/[▸▾▶▼▲]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-},
+      return String(text || '')
+        .replace(/\s[+-]$/g, '')
+        .replace(/\[\+\]|\[-\]/g, '')
+        .replace(/[▸▾▶▼▲]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    },
 
     prepareHeader(header, sectionName) {
-  if (header.dataset.collapsibleReady === '1') return;
+      if (header.dataset.collapsibleReady === '1') return;
 
-  header.dataset.collapsibleReady = '1';
-  header.dataset.sectionName = sectionName;
+      header.dataset.collapsibleReady = '1';
+      header.dataset.sectionName = sectionName;
 
-  header.classList.add('cc-collapsible-header');
-  header.setAttribute('role', 'button');
-  header.setAttribute('tabindex', '0');
+      header.classList.add('cc-collapsible-header');
+      header.setAttribute('role', 'button');
+      header.setAttribute('tabindex', '0');
 
-  const toggle = document.createElement('span');
-  toggle.className = 'cc-collapsible-toggle';
-  toggle.textContent = '[-]';
+      const toggle = document.createElement('span');
+      toggle.className = 'cc-collapsible-toggle';
+      toggle.textContent = ' -';
 
-  header.appendChild(toggle);
+      header.appendChild(toggle);
 
-  header.addEventListener('click', () => this.toggleSection(header));
+      header.addEventListener('click', () => this.toggleSection(header));
 
-  header.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      this.toggleSection(header);
-    }
-  });
-},
+      header.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.toggleSection(header);
+        }
+      });
+    },
+
+    toggleSection(header) {
+      const sectionName = header.dataset.sectionName;
+      if (!sectionName) return;
+
+      this.state[sectionName] = !this.state[sectionName];
+
+      this.saveState();
+      this.setSectionCollapsed(header, this.state[sectionName]);
+    },
+
     setSectionCollapsed(header, collapsed) {
-  const sectionName = header.dataset.sectionName;
+      const sectionName = header.dataset.sectionName;
 
-  const toggle = header.querySelector('.cc-collapsible-toggle');
-  if (toggle) {
-    toggle.textContent = collapsed ? '[+]' : '[-]';
-  }
+      const toggle = header.querySelector('.cc-collapsible-toggle');
+      if (toggle) {
+        toggle.textContent = collapsed ? ' +' : ' -';
+      }
 
-  header.title = `Click to ${collapsed ? 'expand' : 'collapse'} ${sectionName}`;
+      header.title = `Click to ${collapsed ? 'expand' : 'collapse'} ${sectionName}`;
 
-  for (const node of this.getSectionNodes(header)) {
-    node.classList.toggle('cc-collapsible-hidden', collapsed);
-  }
-},
+      for (const node of this.getSectionNodes(header)) {
+        node.classList.toggle('cc-collapsible-hidden', collapsed);
+      }
+    },
 
     getSectionNodes(header) {
       const nodes = [];
@@ -226,20 +235,25 @@
       if (!node) return true;
 
       if (node.classList && node.classList.contains('title')) return true;
-      if (node.tagName === 'H2' || node.tagName === 'H3') return true;
+      if (['H2', 'H3'].includes(node.tagName)) return true;
 
       return false;
     },
   };
 
-  function registerWhenReady() {
+  function registerWhenGameReady() {
     if (typeof Game === 'undefined' || !Game.registerMod) {
-      setTimeout(registerWhenReady, 250);
+      setTimeout(registerWhenGameReady, 250);
+      return;
+    }
+
+    if (Game.mods && Game.mods[MOD_ID]) {
+      console.log(`[${MOD_NAME}] Already registered.`);
       return;
     }
 
     Game.registerMod(MOD_ID, CollapsibleOptions);
   }
 
-  registerWhenReady();
+  registerWhenGameReady();
 })();
