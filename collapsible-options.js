@@ -74,40 +74,37 @@
     },
 
     injectCss() {
-      if (document.getElementById('collapsible-options-css')) return;
+  if (document.getElementById('collapsible-options-css')) return;
 
-      const css = document.createElement('style');
-      css.id = 'collapsible-options-css';
+  const css = document.createElement('style');
+  css.id = 'collapsible-options-css';
 
-      css.textContent = `
-        .cc-collapsible-header {
-          cursor: pointer;
-          user-select: none;
-          position: relative;
-          padding-right: 24px !important;
-        }
+  css.textContent = `
+    .cc-collapsible-header {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
 
-        .cc-collapsible-header:hover {
-          filter: brightness(1.15);
-        }
+    .cc-collapsible-header:hover {
+      filter: brightness(1.15);
+    }
 
-        .cc-collapsible-header::after {
-          content: attr(data-collapse-icon);
-          position: absolute;
-          right: 6px;
-          top: 50%;
-          transform: translateY(-50%);
-          opacity: 0.9;
-          font-size: 13px;
-        }
+    .cc-collapsible-toggle {
+      float: right;
+      font-size: 12px;
+      opacity: 0.9;
+      margin-left: 8px;
+      font-weight: bold;
+    }
 
-        .cc-collapsible-hidden {
-          display: none !important;
-        }
-      `;
+    .cc-collapsible-hidden {
+      display: none !important;
+    }
+  `;
 
-      document.head.appendChild(css);
-    },
+  document.head.appendChild(css);
+},
 
     hookOptionsMenu() {
       if (
@@ -164,52 +161,52 @@
     },
 
     cleanText(text) {
-      return String(text || '')
-        .replace(/[▸▾▶▼▲]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    },
+  return String(text || '')
+    .replace(/\[\+\]|\[-\]/g, '')
+    .replace(/[▸▾▶▼▲]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+},
 
     prepareHeader(header, sectionName) {
-      if (header.dataset.collapsibleReady === '1') return;
+  if (header.dataset.collapsibleReady === '1') return;
 
-      header.dataset.collapsibleReady = '1';
-      header.dataset.sectionName = sectionName;
+  header.dataset.collapsibleReady = '1';
+  header.dataset.sectionName = sectionName;
 
-      header.classList.add('cc-collapsible-header');
-      header.setAttribute('role', 'button');
-      header.setAttribute('tabindex', '0');
+  header.classList.add('cc-collapsible-header');
+  header.setAttribute('role', 'button');
+  header.setAttribute('tabindex', '0');
 
-      header.addEventListener('click', () => this.toggleSection(header));
+  const toggle = document.createElement('span');
+  toggle.className = 'cc-collapsible-toggle';
+  toggle.textContent = '[-]';
 
-      header.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          this.toggleSection(header);
-        }
-      });
-    },
+  header.appendChild(toggle);
 
-    toggleSection(header) {
-      const sectionName = header.dataset.sectionName;
-      if (!sectionName) return;
+  header.addEventListener('click', () => this.toggleSection(header));
 
-      this.state[sectionName] = !this.state[sectionName];
-
-      this.saveState();
-      this.setSectionCollapsed(header, this.state[sectionName]);
-    },
-
+  header.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleSection(header);
+    }
+  });
+},
     setSectionCollapsed(header, collapsed) {
-      const sectionName = header.dataset.sectionName;
+  const sectionName = header.dataset.sectionName;
 
-      header.dataset.collapseIcon = collapsed ? '▶' : '▼';
-      header.title = `Click to ${collapsed ? 'expand' : 'collapse'} ${sectionName}`;
+  const toggle = header.querySelector('.cc-collapsible-toggle');
+  if (toggle) {
+    toggle.textContent = collapsed ? '[+]' : '[-]';
+  }
 
-      for (const node of this.getSectionNodes(header)) {
-        node.classList.toggle('cc-collapsible-hidden', collapsed);
-      }
-    },
+  header.title = `Click to ${collapsed ? 'expand' : 'collapse'} ${sectionName}`;
+
+  for (const node of this.getSectionNodes(header)) {
+    node.classList.toggle('cc-collapsible-hidden', collapsed);
+  }
+},
 
     getSectionNodes(header) {
       const nodes = [];
